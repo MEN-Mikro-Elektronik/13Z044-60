@@ -1,0 +1,10 @@
+README for repository 13Z044-60
+===============================
+
+These are the files required for building a Wind Media Library (WindML) static lib as a DKM in the Workbench.
+
+Copy these files with exactly this directory sstructure under the $(WIND_BASE)/components/windml-5.x path of your VxWorks installation.
+
+Then create a DKM project and select the 16Z044 graphics driver and 16Z031 Touch as pointing device.
+
+
