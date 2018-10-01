@@ -86,12 +86,8 @@ static char *Z044_RCSid="$Id: udmen16z044.c,v 1.9 2015/08/17 09:09:49 ts Exp $";
 #include <ugl/driver/graphics/iodrv/udPci.h>
 #include <ugl/driver/graphics/iodrv/udDevMemUtil.h>
 #include <rtpLib.h>
-#include <logLib.h>
 #include "semLib.h"
 #include "ffsLib.h"
-#include "private/vmLibP.h"
-
-
 #include <ugl/uglmem.h>
 #include <ugl/ugllog.h>
 #include <ugl/driver/graphics/common/udcHwAbsLayer.h>
@@ -103,7 +99,7 @@ static char *Z044_RCSid="$Id: udmen16z044.c,v 1.9 2015/08/17 09:09:49 ts Exp $";
 #include <ugl/driver/graphics/men16z044/udmen16z044.h>
 
 /* debug define, enable in case of problems */
-/* #define Z044_DEBUG */
+#undef Z044_DEBUG
 
 /* when defined, Screen is cleared on startup */
 #define Z044_START_WITH_CLEAR_SCREEN
@@ -376,8 +372,7 @@ UGL_UGI_DRIVER * uglmen16z044DevCreate
 	}
 
 	/* Allocate device data structure from shared memory */
-	pGenDriver = (UGL_GENERIC_DRIVER *)uglSharedMemAlloc(sizeof(UGL_GENERIC_DRIVER), 
-														 UGL_MEM_CLEAR);
+	pGenDriver = (UGL_GENERIC_DRIVER *)uglSharedMemAlloc(sizeof(UGL_GENERIC_DRIVER), UGL_MEM_CLEAR);
 
 	if( UGL_NULL == pGenDriver ) {
 		uglLog( UGL_ERR_TYPE_FATAL,	"uglmen16z044DevCreate(): not enough ressources\n",0,0,0,0,0);
@@ -522,19 +517,23 @@ UGL_STATUS uglmen16z044DevDestroy
 
 	men16z044Deinitialize( pGenDriver );
 
+#if 0 /* ts@men: move this to kernel mode ? result of WebEx on Oct. 1st 2018: yes! */
 	/* Close the device at the BSP level */
 	uglGraphicsDevClose (pGenDriver->pWmlDevice);
+#endif
 
 	if( pDriver->pPageZero )
 	{
 		if( pDriver->pPageZero->pDdb )
 			UGL_FREE(pDriver->pPageZero->pDdb);
-
 		UGL_FREE(pDriver->pPageZero);
 	}
 
-
-	UGL_FREE(pGenDriver);
+	if( pGenDriver )
+	{
+		uglSharedMemFree ((char *)pGenDriver);
+		pDriver = NULL;
+	}
 
 	return (UGL_STATUS_OK);
 }
@@ -555,17 +554,11 @@ UGL_STATUS uglmen16z044Info
 	UGL_GENERIC_DRIVER *pGenDriver = (UGL_GENERIC_DRIVER *)pDriver;
 	UGL_STATUS error = UGL_STATUS_ERROR;
 
-#ifdef Z044_DEBUG
-	uglLog( UGL_ERR_TYPE_INFO, "uglmen16z044Info() infoRequest 0x%04x\n",
-			infoRequest,0,0,0,0);
-#endif /* Z044_DEBUG */
-
     if(pDriver->pMode == UGL_NULL)
         return(UGL_STATUS_ERROR);
 
 	switch (infoRequest)
 	{
-
 		case UGL_FB_INFO_REQ:
 		{
 			UGL_FB_INFO *fbInfo = (UGL_FB_INFO *)info;
@@ -632,9 +625,6 @@ UGL_STATUS uglmen16z044Info
 #endif /*INCLUDE_UGL_EXT*/
 
 		default:
-			uglLog( UGL_ERR_TYPE_WARN,
-					"uglmen16z044Info() infoRequest 0x%08x\n",
-					infoRequest,0,0,0,0);
 			break;
 	}
 
@@ -688,9 +678,8 @@ UGL_STATUS uglmen16z044ModeSet
     UGL_UINT32 videoMemSize;
     void * videoMemAddress;
 
-#ifdef Z044_DEBUG
-	uglLog( UGL_ERR_TYPE_INFO, "uglmen16z044ModeSet\n", 0,0,0,0,0);
-#endif /* Z044_DEBUG */
+    if (( pUgiDriver == NULL ) || ( pMode == NULL ))
+    	return ERROR;
 
 	if( men16z044Initialize( pGenDriver ) != UGL_STATUS_OK ) {
 		uglLog( UGL_ERR_TYPE_FATAL,
@@ -738,28 +727,6 @@ UGL_STATUS uglmen16z044ModeSet
 	pGenDriver->pDrawPage = pUgiDriver->pPageZero;
 	pGenDriver->pVisiblePage = pUgiDriver->pPageZero;
 
-
-	/* Create a memory pool with the unused portion of video memory */
-	videoMemAddress = (void *) ((UGL_UINT32)pGenDriver->fbAddress +
-								pUgiDriver->pMode->width * pUgiDriver->pMode->height *
-								(pUgiDriver->pMode->colorDepth / 8));
-
-	/* FB size hard coded here. */
-	/* TBD: use baseSize returned from WINDML_PCI_BASE_SIZE_GET? */
-	videoMemSize = (UGL_UINT32)0x00800000 -((pUgiDriver->pMode->width *
-											 pUgiDriver->pMode->height) *
-											(pUgiDriver->pMode->colorDepth / 8));
-
-	if(videoMemSize > ((pUgiDriver->pMode->width * pUgiDriver->pMode->height) * 2))
-		{
-		pGenDriver->videoMemPoolId = uglMemPoolCreate(videoMemAddress,
-													  videoMemSize);
-		}
-	else
-		{
-		pGenDriver->videoMemPoolId = UGL_NULL;
-		}
-
 #ifdef Z044_DEBUG
 	uglLog( UGL_ERR_TYPE_INFO,
 			"uglmen16z044ModeSet() w/h/bpp %d %d %d refresh %d  fb %08x\n",
@@ -768,12 +735,6 @@ UGL_STATUS uglmen16z044ModeSet
 			pUgiDriver->pMode->colorDepth,
 			pUgiDriver->pMode->refreshRate,
 			(int)pGenDriver->fbAddress);
-	uglLog( UGL_ERR_TYPE_INFO,
-			"                      videoMemPool: Id %d image: %p imgSize: %p\n",
-			(int)pGenDriver->videoMemPoolId,
-			(int)videoMemAddress,
-			(int)videoMemSize,
-			0, 0);
 #endif /* Z044_DEBUG */
 
 	/* Clear the screen */
@@ -803,7 +764,6 @@ UGL_STATUS uglmen16z044ModeAvailGet
 	/* return the mode list */
 	*pModeArray = pDevModes;
 	*pNumModes = NELEMENTS(Z044_modes);
-
 
 	return(UGL_STATUS_OK);
 	}
@@ -843,6 +803,9 @@ UGL_STATUS uglmen16z044PageVisibleSet
 	)
 	{
 	UGL_GENERIC_DRIVER *pGenDriver = (UGL_GENERIC_DRIVER *)pDriver;
+
+	if ( pGenDriver == NULL )
+		return ERROR;
 
 #ifdef _WRS_KERNEL
 	UGL_UINT32 address;
@@ -908,8 +871,8 @@ STATUS men16z044Initialize
 		uglLog( UGL_ERR_TYPE_WARN,
 				"men16z044Initialize(): get FB size failed, assuming 16MB\n",
 				0,0,0,0,0);
-		/* set default value: 16MB */
-		baseSize.size = 0x1000000;
+		/* set default value: 2MB */
+		baseSize.size = 0x200000;
 	}
 
 	/* determined above already */
@@ -919,16 +882,10 @@ STATUS men16z044Initialize
 	/* If no size is provided the address has to be a Base address of the PCI */
 	/* device and size is determined.   */
 	/* If not so the size has to be provided here (e.g. for Chameleon devices)*/
-#ifdef Z044_DEBUG
-	uglLog( UGL_ERR_TYPE_INFO,
-			"pGenDriver->pWmlDevice->pPhysBaseAdrs1=0x%08x\n",
-			(UINT32)pGenDriver->pWmlDevice->pPhysBaseAdrs1,0,0,0,0 );
-#endif
 
 	if( (error = uglGraphicsDevMap( pGenDriver->pWmlDevice,
 									(UINT32)pGenDriver->pWmlDevice->pPhysBaseAdrs1,
-									baseSize.size,
-									&virtAdrs )) != UGL_STATUS_OK )
+									baseSize.size, &virtAdrs )) != UGL_STATUS_OK )
 	{
 		uglLog( UGL_ERR_TYPE_FATAL,
 				"men16z044Initialize(): uglGraphicsDevMap() failed\n",
@@ -993,9 +950,8 @@ UGL_STATUS men16z044Deinitialize
 
 #endif /* _WRS_KERNEL */
 
-#ifdef Z044_DEBUG
-	uglLog( UGL_ERR_TYPE_INFO, "men16z044Deinitialize()\n", 0,0,0,0,0);
-#endif /* Z044_DEBUG */
+	/* ts@men: WR suggest uglGraphicsDevClose() here ? yes, works */
+	uglGraphicsDevClose (pGenDriver->pWmlDevice);
 
 	return UGL_STATUS_OK;
 } /* men16z044Deinitialize */
@@ -1017,6 +973,9 @@ UGL_STATUS men16z044HwModeSet
 )
 {
 	UGL_GENERIC_DRIVER * pGenDriver = (UGL_GENERIC_DRIVER *)pUgiDriver;
+
+	if ( pGenDriver == NULL )
+		return ERROR;
 
 #ifdef _WRS_KERNEL
 	UGL_UINT32 ldata = 0;
@@ -1124,7 +1083,13 @@ UGL_STATUS men16z044ModeAvailable(
 	UGL_UINT32 *pCtrlReg
 )
 {
-	UGL_MODE *pMode = pUgiDriver->pMode;
+	UGL_MODE *pMode = NULL;
+
+	if ( pUgiDriver == NULL )
+		return ERROR;
+
+	pMode = pUgiDriver->pMode;
+
 	/* check color depth */
 	if( pMode->colorDepth != 16 )
 	{
