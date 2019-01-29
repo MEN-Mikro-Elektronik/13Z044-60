@@ -602,8 +602,6 @@ UGL_STATUS uglmen16z044ModeSet
 	UGL_GEN_DDB *pDdb;
 	UGL_INT32 index;
 	UGL_GENERIC_DRIVER *pGenDriver = (UGL_GENERIC_DRIVER *)pUgiDriver;
-    UGL_UINT32 videoMemSize;
-    void * videoMemAddress;
 
     if (( pUgiDriver == NULL ) || ( pMode == NULL ))
     	return ERROR;
