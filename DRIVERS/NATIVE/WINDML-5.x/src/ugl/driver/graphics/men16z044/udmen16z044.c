@@ -128,7 +128,6 @@
 #define Z044_CTRL_RES_1280X800	0x00000011
 							/**< setting VGA resolution ( 1280 x  800 ) */
 
-
 /* graphics defines */
 
 #define Z044_WIDTH_320  	 320
@@ -146,6 +145,7 @@
 #define Z044_REFRESH_RATE_60	60
 #define Z044_REFRESH_RATE_75	75
 
+char * G_z44Version=" 16Z044-60 built " __DATE__"  "__TIME__ ;
 
 UGL_LOCAL UGL_MODE Z044_modes[] =
 	{
@@ -455,14 +455,12 @@ UGL_STATUS uglmen16z044DevDestroy
 	{
 		if( pDriver->pPageZero->pDdb )
 			UGL_FREE(pDriver->pPageZero->pDdb);
+
 		UGL_FREE(pDriver->pPageZero);
 	}
 
-	if( pGenDriver )
-	{
-		uglSharedMemFree ((char *)pGenDriver);
-		pDriver = NULL;
-	}
+
+	UGL_FREE(pGenDriver);
 
 	return (UGL_STATUS_OK);
 }
@@ -800,8 +798,8 @@ STATUS men16z044Initialize
 		uglLog( UGL_ERR_TYPE_WARN,
 				"men16z044Initialize(): get FB size failed, assuming 16MB\n",
 				0,0,0,0,0);
-		/* set default value: 2MB */
-		baseSize.size = 0x200000;
+		/* set default value: 16MB */
+		baseSize.size = 0x1000000;
 	}
 
 	/* determined above already */
@@ -871,16 +869,23 @@ UGL_STATUS men16z044Deinitialize
 #endif
 
 	Z044_CTL_OUT( ldata | Z044_CTRL_CHANGE );
+#ifdef Z044_DEBUG
+	uglLog( UGL_ERR_TYPE_INFO, "men16z044Deinitialize[krnl]()\n", 0,0,0,0,0);
+#endif /* Z044_DEBUG */
+
+	/* ts@men: WR suggest uglGraphicsDevClose() here ? yes, works */
+	uglGraphicsDevClose (pGenDriver->pWmlDevice);
 
 #else /* _WRS_KERNEL */
 
 	/* Initialize when execution in RTP */
-	ioctl (pGenDriver->pWmlDevice->fd, WINDML_MEN16Z044_INIT, (int)pGenDriver);
+#ifdef Z044_DEBUG
+	uglLog( UGL_ERR_TYPE_INFO, "men16z044Deinitialize[RTP]()\n", 0,0,0,0,0);
+#endif /* Z044_DEBUG */
+	ioctl (pGenDriver->pWmlDevice->fd, WINDML_MEN16Z044_DEINIT, (int)pGenDriver);
 
 #endif /* _WRS_KERNEL */
 
-	/* ts@men: WR suggest uglGraphicsDevClose() here ? yes, works */
-	uglGraphicsDevClose (pGenDriver->pWmlDevice);
 
 	return UGL_STATUS_OK;
 } /* men16z044Deinitialize */
