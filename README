@@ -1,0 +1,49 @@
+README for repository 13Z044-60
+===============================
+
+Quick installation guide for WindML-4.x/5.x drivers 
+
+These are the files required for building a Wind Media Library (WindML) static lib as a DKM in the Workbench. The folder structure
+in this zip file is created with regard to the MDIS for VxWorks System Package, so the folders config/ h/ and src/ which are located
+in the Workbench installation folder under <installdir>/components/windml-5.3 are under WINDML-5.x in this file:
+
+.
+`-- DRIVERS
+    `-- NATIVE
+        `-- WINDML-5.x
+            |-- config
+            |   |-- makefiles
+            |   `-- wrmdb
+            |-- h
+            |   `-- ugl
+            |       `-- driver
+            |           |-- graphics
+            |           |   `-- men16z044
+            |           `-- pointer
+            `-- src
+                `-- ugl
+                    `-- driver
+                        |-- graphics
+                        |   `-- men16z044
+                        `-- pointer
+                            `-- men16z031
+
+
+Copy these folders ( config, h, src) into the $(WIND_BASE)/components/windml-5.x path of your VxWorks installation (e.g. with Windows
+explorer, it will as if it shall integrate the contents of these folders into the existing ones - say yes then).
+
+Then create a DKM project and select the 16Z044 graphics driver and 16Z031 Touch as pointing device.:
+
+    - setup a VxWorks Downloadable Kernel Module Project (DKM) +
+                   VxWorks Middleware Component +
+                   WindML Component: take care to select proper resolution for your
+                   16Z044 based graphics hardware or e.g. ugldemo will fail.
+
+    - BuildSpec is PPC32 (currently the only architecture on which Z044 IP Core is used)
+    - Configure Wind Media Library
+    - build the DKM project
+    - set the switch MEN_LINK_WINDML in the BSP Makefile target\config\men_em01\Makefile to the appropiate Workbench workspace directory where your DKM project is located
+
+    - when the build is done, a libwindml-5.3_dyn.a archive in folder 
+       <workspace>\obj\vxworks-6.9\krnl\lib\... 
+      is generated which must be linked to the vxWorks.st image.
