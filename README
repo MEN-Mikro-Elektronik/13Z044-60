@@ -3,6 +3,8 @@ README for repository 13Z044-60
 
 Quick installation guide for WindML-4.x/5.x drivers 
 
+ /!\ If you want to use the driver in RTP without a crash, build the driver in branch 13Z044-60_RTP /!\
+
 These are the files required for building a Wind Media Library (WindML) static lib as a DKM in the Workbench. The folder structure
 in this zip file is created with regard to the MDIS for VxWorks System Package, so the folders config/ h/ and src/ which are located
 in the Workbench installation folder under <installdir>/components/windml-5.3 are under WINDML-5.x in this file:

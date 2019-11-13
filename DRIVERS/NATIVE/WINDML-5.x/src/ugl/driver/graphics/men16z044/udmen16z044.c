@@ -145,6 +145,7 @@
 #define Z044_REFRESH_RATE_60	60
 #define Z044_REFRESH_RATE_75	75
 
+char * G_z44Version=" 16Z044-60 built " __DATE__"  "__TIME__ ;
 
 UGL_LOCAL UGL_MODE Z044_modes[] =
 	{
@@ -300,8 +301,7 @@ UGL_UGI_DRIVER * uglmen16z044DevCreate
 	}
 
 	/* Allocate device data structure from shared memory */
-	pGenDriver = (UGL_GENERIC_DRIVER *)uglSharedMemAlloc(sizeof(UGL_GENERIC_DRIVER), 
-														 UGL_MEM_CLEAR);
+	pGenDriver = (UGL_GENERIC_DRIVER *)uglSharedMemAlloc(sizeof(UGL_GENERIC_DRIVER), UGL_MEM_CLEAR);
 
 	if( UGL_NULL == pGenDriver ) {
 		uglLog( UGL_ERR_TYPE_FATAL,	"uglmen16z044DevCreate(): not enough ressources\n",0,0,0,0,0);
@@ -455,14 +455,12 @@ UGL_STATUS uglmen16z044DevDestroy
 	{
 		if( pDriver->pPageZero->pDdb )
 			UGL_FREE(pDriver->pPageZero->pDdb);
+
 		UGL_FREE(pDriver->pPageZero);
 	}
 
-	if( pGenDriver )
-	{
-		uglSharedMemFree ((char *)pGenDriver);
-		pDriver = NULL;
-	}
+
+	UGL_FREE(pGenDriver);
 
 	return (UGL_STATUS_OK);
 }
@@ -798,8 +796,8 @@ STATUS men16z044Initialize
 		uglLog( UGL_ERR_TYPE_WARN,
 				"men16z044Initialize(): get FB size failed, assuming 16MB\n",
 				0,0,0,0,0);
-		/* set default value: 2MB */
-		baseSize.size = 0x200000;
+		/* set default value: 16MB */
+		baseSize.size = 0x1000000;
 	}
 
 	/* determined above already */
@@ -869,6 +867,9 @@ UGL_STATUS men16z044Deinitialize
 #endif
 
 	Z044_CTL_OUT( ldata | Z044_CTRL_CHANGE );
+#ifdef Z044_DEBUG
+	uglLog( UGL_ERR_TYPE_INFO, "men16z044Deinitialize[krnl]()\n", 0,0,0,0,0);
+#endif /* Z044_DEBUG */
 
 	/* ts@men: WR suggest uglGraphicsDevClose() here ? yes, works */
 	uglGraphicsDevClose (pGenDriver->pWmlDevice);
@@ -876,9 +877,13 @@ UGL_STATUS men16z044Deinitialize
 #else /* _WRS_KERNEL */
 
 	/* Initialize when execution in RTP */
+#ifdef Z044_DEBUG
+	uglLog( UGL_ERR_TYPE_INFO, "men16z044Deinitialize[RTP]()\n", 0,0,0,0,0);
+#endif /* Z044_DEBUG */
 	ioctl (pGenDriver->pWmlDevice->fd, WINDML_MEN16Z044_DEINIT, (int)pGenDriver);
 
 #endif /* _WRS_KERNEL */
+
 
 	return UGL_STATUS_OK;
 } /* men16z044Deinitialize */
