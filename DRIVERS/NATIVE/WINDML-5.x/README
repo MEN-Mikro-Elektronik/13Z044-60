@@ -1,0 +1,17 @@
+Quick installation guide for WindML-5.x drivers for VxWorks 7
+ (taken from guide for MEN EM01 VxWorks BSP 10EM01-60)
+------------------------------------------------------------
+
+- WindML 5.3 for VxWorks 7 is provided as a complete source tree, located
+  in a sample workspace (outside the MDIS source tree)
+
+- the files provided in this WINDML-5.x directory are EM10A-specific
+  additions to the WindML 5.3 source tree specific to the MEN EM10A;
+  these files are already present at corresponding locations in the
+  delivered WindML 5.3 source tree.
+
+- to build the WindML 5.3 libraries, refer to the scripts provided with the
+  delivery (including create-build-windml.bat and {create,build}-windml-*.sh)
+
+- NOTE: the delivered UGL graphics driver for Z044 requires VxWorks 7 and is
+  not backward-compatible with VxWorks 6.x
